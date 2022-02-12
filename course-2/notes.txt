@@ -1,0 +1,709 @@
+data-lake-in-aws
+
+Section 5 - Monitoring, Optimization and Security
+
+SSE (Server side encryption) : encrypt data at rest (AES-256)
+
+3 types of keys:
+
+SSE-S3 (S3 managed key):
+S3 automatically encrypts data when stored in it and decrypts it 
+with default key once it is retrieved.
+
+If bucket is made accidently made public, anonymous user can access
+the data and S3 decrypts the data.
+
+SSE-KMS (Customer Master key in KMS):
+Create your master key in KMS.
+To store data into S3, user needs to have access to S3 and KMS key.
+
+If bucket is made accidently made public, anonymous user cannot access
+the data as they do not have access to KMS.
+
+SSE-C (S3 uses key provided in the request)
+Here the client provides the key to encrypt / decrypt data.
+So s3 encrypts/decrypts object using key provided by customer.
+
+S3 Client-side encryption
+
+Here client already encrypts the data and just stores into S3.
+So data in transfer is also encrypted.
+Client side manages the keys for encryption.
+
+========================================================
+
+Section 6 - Data Catalog and In-place Querying
+
+========================================================
+
+Glue and Athena
+In this section, you will gain hands-on experience on Glue and Athena
+
+Glue Data Catalog and Crawlers
+
+Athena in-place querying
+
+Glue ETL using Apache Spark
+
+In-place querying of Amazon Customer Reviews
+
+Source Code
+The source code for this course is distributed using Git
+
+https://github.com/ChandraLingam/AmazonSageMakerCourse
+
+For the labs, we will be using the content of the DataLake folder in the distribution.
+
+If you are not familiar with Git, you can simply download the entire repository as a zip file
+
+Download Zip
+1. From your browser, open the page https://github.com/ChandraLingam/AmazonSageMakerCourse
+
+2. Select Clone or Download and Choose Download Zip
+
+3. Unzip the content in your machine
+
+----------------------------------------
+
+Lab - Glue Data Catalog Instructions
+Introduction
+The Glue UI has changed, and I have provided instructions on how to configure a crawler
+
+This instruction complements the next video Lab - Glue Data Catalog. I recommend watching the video first and following these instructions to complete the lab.
+
+Permissions
+We need to first set up permissions for Glue
+
+From AWS console, Open IAM service console
+
+From the left navigation pane, Select Roles
+
+Select Create Role
+
+Ensure AWS Service is selected
+
+Choose Glue service [from the list of services shown]
+
+Go to the Permissions Page
+
+In Filter policies, search for Glue
+
+AWS has provided a policy named AWSGlueServiceRole
+
+This policy grants a good set of default permissions that we can use.
+
+For example, glue service can access any bucket in your account that has aws-glue- in the name
+
+Select the policy
+
+Keep going until we see the Review page
+
+Name the role as AWSGlueServiceRoleDefault
+
+And Create a role
+
+We can now use this role for all our crawlers in this course
+
+S3 Bucket
+We now need to create a new S3 bucket for this lab.
+
+The naming convention we will follow is: aws-glue-yourname
+
+The aws-glue- Prefix is essential as we granted permission for this Prefix in the IAM role
+
+Ensure you create the Bucket in the region where you want to run the queries.
+
+In my case, I created the bucket aws-glue-cl in N.Virginia
+
+Open the bucket and click on Create folder
+
+Create a folder iris
+
+Go to the iris folder
+
+And a create a subfolder csv
+
+Upload Data
+In the course distribution, under the DataLake and Iris folder, there is a file called iris_all.csv
+
+Upload the iris_all.csv file to the iris\csv folder in your S3 Bucket
+
+Glue Crawler
+From the AWS console, open the Glue service console
+
+Check the region and use the same region as your S3 Bucket [In my case, I am using N.Virginia]
+
+We are going to create a Crawler that will go and analyze data in the data lake and collect metadata
+
+Configure Crawler
+Select Crawler from the left navigation pane
+
+Add a crawler
+
+Let’s name the crawler iris_csv_crawler
+
+Go to the Next page
+
+Specify Input
+For crawler source type, choose Datastores
+
+And select Crawl all folders
+
+Go to the Next page
+
+Add a datastore
+For Choose a data store, select S3
+
+Glue Crawler can currently crawl and collect metadata from S3, DynamoDB, DocumentDB, MongoDB, or any other database using JDBC drivers.
+
+For this lab, our data is in S3.
+
+For Craw data in, choose Specified path in my account
+
+Include path
+
+Click on the folder icon
+
+Expand your Bucket [aws-glue-yourname]
+
+Expand iris folder
+
+And select the csv subfolder
+
+Put a slash at the end to indicate folder structure – as we have files under this folder.
+
+Your path should like: s3://aws-glue-yourname/iris/csv/
+
+Go to the Next page
+
+Select No for add another datastore
+
+Go to the Next page
+
+Glue service needs permission to read our data
+
+We grant this permission using IAM Role
+
+Choose an existing IAM role
+
+Select the AWSGlueServiceRoleDefault role that we created earlier
+
+Go to the Next page
+
+For Frequency, select Run on demand
+
+Select Next
+
+Specify Output
+Now, we need to configure the name of the database in the Glue Catalog
+
+Select Add database
+
+For database name, let’s call it demo_db
+
+And Create
+
+For the Prefix added to tables, type iris_
+
+Go to the Next page to review the configuration
+
+And select Finish to create the crawler
+
+Run Crawler
+Now, we need to run the crawler
+
+Select iris_csv_crawler and click on the Run Crawler button
+
+It will take a couple of minutes for the crawler to start, crawl the data, and update the catalog.
+
+Once the job completes, you will notice that for iris_csv_crawler, Tables added column shows a count of 1
+
+If you don’t see the count updated, refresh the page
+
+Tables
+Let’s explore the new table now
+
+Select Tables from the navigation pane
+
+Click on the iris_csv table
+
+And this page shows all the details the crawler found
+
+Scroll down to the schema section, and Glue Crawler identified five columns: sepal length, width, petal length, width, and the class
+
+It also discovered data types for each of these columns
+
+
+
+Summary
+In this lab, we used a Glue Crawler to collect metadata about our files and store them in Glue Catalog.
+
+Your users can now explore data in the data lake using this catalog.
+
+This catalog also hides the location, folder structure, and file format details from users
+
+Now that our catalog is ready let’s query using SQL in the next lab.
+
+---------------------------
+
+Lab Instructions – Athena In-place Querying
+Lab – Athena In-place Querying Instructions
+Introduction
+In the previous lab, we configured a Glue Crawler to collect metadata about the iris csv data
+
+In this lab, let’s query the Iris data using Athena. The Athena UI has changed, and I have provided the updated instructions here.
+
+This instruction complements the next video Lab - Athena In-place Querying. I recommend watching the video first and following these instructions to complete the lab.
+
+Athena
+From AWS console, open Athena service console
+
+Expand the left navigation pane, select Query editor
+
+Setup Query Results
+Before you run your first query, you need to setup a query result location in Amazon S3
+
+Click on View Settings
+
+Select Manage
+
+Specify an S3 Location:
+
+AWS recommends this convention: aws-athena-query-results-MyAcctID-MyRegion
+
+Where MyAcctID is your account ID [you can find your account ID by clicking on your user name shown on the top right corner]
+
+MyRegion is the current region [you can find the region code by clicking on the region name, and the console shows the code. For example, N. Virginia code is us-east-1]
+
+Complete S3 Location should like this:
+
+s3://aws-athena-query-results-1234567890-us-east-1/
+
+Save the changes
+
+Query Editor
+From Query Editor, ensure the Editor tab is selected
+
+For Data source, select AWSDataCatalog
+
+For Database, choose demo_db
+
+Under Tables, you should see iris_csv
+
+Expand the table name to see the columns
+
+All this metadata is coming from the Glue Catalog.
+
+To generate a sample query, click on the three dots right next to the iris_csv
+
+Select the preview table, and it generates a SQL query and runs it
+
+SELECT * FROM "demo_db"."iris_csv" limit 10;
+
+Athena lets you directly query S3 data using SQL.
+
+Filter Examples
+Here are some more queries that you can try:
+
+Let’s query for a specific class
+
+SELECT * FROM "demo_db"."iris_csv"
+WHERE class = 'Iris-setosa';
+You can even run wildcard queries
+
+SELECT * FROM "demo_db"."iris_csv"
+where class like '%setosa%';
+And get a count of records
+
+SELECT count(*) AS COUNT FROM "demo_db"."iris_csv"
+
+And here, we are computing area from existing columns
+
+SELECT sepal_length, sepal_width,
+sepal_length * sepal_width as sepal_area
+FROM "demo_db"."iris_csv";
+Summary
+In this lab, we saw how you could directly query files in S3 using SQL
+
+Athena service is serverless, and this makes vast amount of unstructured data accessible to any data lake user who can use SQL
+
+--------------------------
+
+ETL job creation using AWS Glue.
+
+The script generated is as follows:
+
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+
+## @params: [JOB_NAME]
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+## @type: DataSource
+## @args: [database = "demo_db", table_name = "iris_iris_all_csv", transformation_ctx = "datasource0"]
+## @return: datasource0
+## @inputs: []
+datasource0 = glueContext.create_dynamic_frame.from_catalog(database = "demo_db", table_name = "iris_iris_all_csv", transformation_ctx = "datasource0")
+## @type: ApplyMapping
+## @args: [mapping = [("sepal_length", "double", "sepal_length", "double"), ("sepal_width", "double", "sepal_width", "double"), ("petal_length", "double", "petal_length", "double"), ("petal_width", "double", "petal_width", "double"), ("class", "string", "class", "string")], transformation_ctx = "applymapping1"]
+## @return: applymapping1
+## @inputs: [frame = datasource0]
+applymapping1 = ApplyMapping.apply(frame = datasource0, mappings = [("sepal_length", "double", "sepal_length", "double"), ("sepal_width", "double", "sepal_width", "double"), ("petal_length", "double", "petal_length", "double"), ("petal_width", "double", "petal_width", "double"), ("class", "string", "class", "string")], transformation_ctx = "applymapping1")
+## @type: ResolveChoice
+## @args: [choice = "make_struct", transformation_ctx = "resolvechoice2"]
+## @return: resolvechoice2
+## @inputs: [frame = applymapping1]
+resolvechoice2 = ResolveChoice.apply(frame = applymapping1, choice = "make_struct", transformation_ctx = "resolvechoice2")
+## @type: DropNullFields
+## @args: [transformation_ctx = "dropnullfields3"]
+## @return: dropnullfields3
+## @inputs: [frame = resolvechoice2]
+dropnullfields3 = DropNullFields.apply(frame = resolvechoice2, transformation_ctx = "dropnullfields3")
+## @type: DataSink
+## @args: [connection_type = "s3", connection_options = {"path": "s3://aws-glue-anand/iris/parquet"}, format = "parquet", transformation_ctx = "datasink4"]
+## @return: datasink4
+## @inputs: [frame = dropnullfields3]
+datasink4 = glueContext.write_dynamic_frame.from_options(frame = dropnullfields3, connection_type = "s3", connection_options = {"path": "s3://aws-glue-anand/iris/parquet"}, format = "parquet", transformation_ctx = "datasink4")
+job.commit()
+
+Once the job is run, it will generate a parquet file from csv.
+To query the data, again you need to define a crawler which will crawl this data 
+and populate schema and you can query that data.
+
+Summary:
+
+Use Glue ETL to convert files to Parquet format
+
+ - Glue automates process of ETL script generation, scheduling
+   and execution.
+ - Glue ETL provisions required Apache Spark infrastructure to 
+   to run the job.
+   
+--------------------
+Amazon customer reviews dataset
+
+Refer this link:
+
+http://s3.amazonaws.com/amazon-reviews-pds/readme.html
+
+use region us-east-1
+
+CREATE EXTERNAL TABLE amazon_reviews_parquet(
+  marketplace string, 
+  customer_id string, 
+  review_id string, 
+  product_id string, 
+  product_parent string, 
+  product_title string, 
+  star_rating int, 
+  helpful_votes int, 
+  total_votes int, 
+  vine string, 
+  verified_purchase string, 
+  review_headline string, 
+  review_body string, 
+  review_date bigint, 
+  year int)
+PARTITIONED BY (product_category string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://amazon-reviews-pds/parquet/'
+  
+Since we manually created the table without crawler, run the below query
+so that Athena knows about this table.
+  
+MSCK REPAIR TABLE amazon_reviews_parquet
+
+Then execute below query:
+
+SELECT product_title, star_rating, review_body FROM
+"demo_db"."amazon_reviews_parquet"
+WHERE product_category = 'Books'
+and star_rating > 3
+limit 3
+
+Time in queue:
+0.182 sec
+Run time:
+12.852 sec
+Data scanned:
+796.78 MB
+
+1	The Bubble Wrap Boy	5	This book represents the best in children's literature. It takes an unlikely, small Asian boy who is bullied and reviled by others and makes him a hero. I loved not only the story but the character of Charlie Han. His mother is so worried about him getting hurt that she makes him deliver take-out from their restaurant on a tricycle covered in reflecting tape. She 's so overprotective that she makes him wear swimming goggles to help decorate the Christmas tree! This is just two of the many images that make the story hilarious. This misfit has but one friend, a boy named Linus Sedgely, otherwise know as Sinus because his nose is so big. Once given the nickname it &#34;stuck firmer than a fossilized booger under a desk.&#34; The two boys are ridiculed and reviled until Charlie takes up skateboarding. His overprotective, overbearing mother over reacts when she finds out and berates him in front of a group of skaters.The incident goes viral and Charlie become the brunt of bullying. One cruel incident includes bubble wrap. When the two boys team up in an attempt to make their walk of shame into a confident strut the plot takes an interesting turn.<br />This book is impeccably written with humor and sensitivity and peopled with believable characters and real life dilemmas. I started the book yesterday and finished it today. So much for yard work and the dirty dishes in the sink. Seriously, this is a really good book. It touched my heart and I wish I had written it!
+2	The Kodansha Kanji Learner's Dictionary	4	This book has all the kanji's and steps to write them. Once you learn the different ways to look it up, its almost impossible not to find the kanji your looking for. Its only down fall is that if you were looking for a kanji that was connected to a word of one of the kanjis your found, it doesnt tell you what page that kanji would be on, rather you have to start from scratch to find it that kanji. Its definitely worth it for those who are determined to learn japanese. recommended for intermediate to advance.
+3	Mustang Restoration Handbook	5
+
+SELECT product_title, star_rating, review_body FROM
+"demo_db"."amazon_reviews_parquet"
+WHERE product_category = 'Books'
+and product_title like 'Harry Potter%'
+and star_rating > 3
+limit 3
+
+
+===========================
+Section 7 - Glue Catalog Management and Schema Evolution
+===========================
+
+How to create PARQUET files?
+In the ETL lab, we saw how to let Glue ETL do the Parquet file conversion for us.  It is quite easy to generate Parquet files using the arrow python package.  In the git resources, I have provided a notebook file in the iris folder: iris_csv_to_parquet.ipynb
+
+This notebook shows how to read a CSV file and convert to Parquet. For the labs, I have provided all the data files that you need.
+
+----------------------------------
+
+Summary: Athena and CSV/TSV Format
+
+----------------------------------
+•
+CSV/TSV columns are accessed by index
+•
+When you have a mix of old data and new data
+•
+Ordering of columns need to be preserved
+•
+Add columns at the end
+•
+Removing columns not supported i.e. new data with missing
+columns
+•
+Data type change would require testing
+•
+Columns can be renamed
+•
+CSV/TSV is suitable if you can add columns at the end and
+not remove any existing columns
+
+In the lab, when we added the columns at the beginning or
+in the middle, the schema got messed up.
+
+whereas when the columns were added at end, the existing queries
+like 
+
+select class, count(*) from "demo_db"."iris_csv" GROUP BY class;
+continued to work with change in resultset due to change in data.
+We had uploaded the file iris_new_column_at_end.csv
+
+Then to reflect the additional columns in the schema, we ran the
+iris_csv_crawler again and could see that 1 table was updated.
+
+We could also rename the column names in the AWS Glue screen itself
+and new queries with changed column names also worked as Glue CSV
+thing works on column index.
+
+
+
+----------------------------------
+
+Summary: Athena and Parquet Format
+
+----------------------------------
+•
+Columns are accessed by column name
+•
+When you have a mix of new and old data:
+•
+Columns can be removed i.e. new data with missing
+columns
+•
+Columns can be reordered
+•
+Column rename not supported (it will pull new data. old
+column not retrieved)
+•
+Data type change would require testing
+•
+Efficient format for high performance and cost effective
+access
+
+In the lab, when we added the columns at the beginning or
+in the middle or the end, it worked as parquet file format
+works on column name and not on column index like csv/tsv.
+
+The existing queries continued to work for e.g. like
+
+select class, count(*) from "demo_db"."iris_csv" GROUP BY class;
+continued to work with change in resultset due to change in data.
+We had uploaded the file iris_new_column_at_end.csv
+
+Then to reflect the additional columns in the schema, we ran the
+iris_parquet_crawler again and could see that 1 table was updated.
+
+We could also rename the column names in the AWS Glue screen itself
+and new queries with changed column names did not work as Glue Parquet
+thing works on column name.
+
+----------------------
+Tips for crawler creation
+----------------------
+
+To summarize, we should keep files having similar structure only in the
+same folder.
+
+So while creating crawler, we should give the path till last folder,
+till when the files are structurally similar.
+
+Create crawlers with more
+specific S3 path
+Sales: S3://bucket/sales/
+HR
+Emp: s3://bucket/hr/emp/
+HR
+Training: s3://bucket/hr/training/
+
+Also you must ensure that in each folder, the data stored is of same
+security tier. 
+
+Very important point to remember while building data lake.
+
+Organize by data classification
+•
+Enforce principles of least privileged access
+•
+Separate buckets by class
+•
+Separate top level folders by class
+•
+Classification of a particular data can change in the
+future
+
+--------------
+Partitioning
+--------------
+- Improve performance
+- Reduce querying costs
+- Prevent GET request rate limit errors in S3
+
+Glue Crawler Partitions
+
+S3 Folder Structure Partition By Region
+- Crawler automatically partitions table based on folder structure
+- When region is specified in where clause, Athena will scan only files in that region
+
+Glue Crawler - Partitions based on time
+
+Partition by year and quarter
+
+Glue Crawler - Hive compatible Partitions
+
+Key-value name for folders
+
+3 different ways to add / remove partitions
+
+Sr. No. 		Type 				Behaviour
+1.				Crawler				Run crawler again to update catalog (slowest) Scheduled (hourly, daily, monthly, 							or custom) Hive compatible and regular partitions
+									Updates catalog to add and remove partitions
+									
+2.				MSCK command		Add or remove Hive compatible partitions (faster)
+									Updates catalog to add and remove partitions
+									On demand, event based
+									
+3. 				ADD,DROP partition	Low level Table command (fastest) 
+									You need to specify which partition to add and remove On
+									demand, event based
+
+---------------
+HIVE partitions
+---------------
+
+Create folder in S3 like s3://aws-glue-anand/iris/hive_partition/
+and then inside that folder like type=setosa and then upload file 
+iris_setosa.csv in this folder.
+
+Create a Glue crawler with Location: s3://aws-glue-anand/iris/hive_partition/
+
+A table called hive_partition is created with an additional column
+type of String type and Partition Key as Partition(0)
+
+Run below query
+
+SELECT class, count(*) FROM "demo_db"."hive_partition"group by class
+
+resultset:
+
+1	Iris-setosa	50
+
+Then create a folder  like type=versicolor and then upload file 
+iris_versicolor.csv in this folder.
+
+Again execute above query, it gives same resultset.
+
+Then go to Athena, and in table select Load Partitions.
+When we do that, below command is fired.
+
+MSCK REPAIR TABLE `hive_partition`;
+
+and output is 
+Partitions not in metastore:	hive_partition:type=versicolor
+Repair: Added partition to metastore hive_partition:type=versicolor
+
+Again execute below query:
+
+
+SELECT class, count(*) FROM "demo_db"."hive_partition"group by class
+
+resultset:
+
+1	Iris-setosa	50
+2	Iris-versicolor	50
+
+
+===========================
+Section 8 - Lab - Customer Review Sentiment Analysis
+===========================
+
+
+
+===========================
+Section 9 - Lab - Serverless application with Kinesis firehose,
+                  Lambda, AWS Comprehand, Glue and Athena
+===========================
+
+Streaming Data Consumption
+In this section, we will look at how to process streaming data, and store in a data lake for querying.
+
+This solution integrates: Kinesis Firehose, Lambda, Comprehend AI, and Athena
+
+Serverless Application for Customer Review Sentiment Analysis
+In this section, we will build a serverless pipeline for processing customer reviews.
+
+This serverless solution integrates several important services: Kinesis Firehose, Lambda functions, Comprehend AI, Glue and Athena
+
+Kinesis Firehose to receive new reviews, add sentiment and store the data to S3
+
+We will then use a Glue Crawler and Athena for querying.
+
+
+
+===========================
+Section 10 - Conclusion
+===========================
+
+Other courses:
+
+https://www.udemy.com/course/aws-machine-learning-a-complete-guide-with-python/?referralCode=9ADB4395937F7D656EB9
+
+https://www.udemy.com/course/python-regular-expressions/?referralCode=D9D33D8FCD263F7CDAE3
+
+https://www.udemy.com/course/aws-certified-solutions-architect-guide-question-bank-i/?referralCode=497C43E00B905AB06F59
+
+https://www.udemy.com/course/2-aws-certified-solutions-architect-guide-question-bank/?referralCode=5A9333FA8583C05574E9
+
+
+
+
+

@@ -1,0 +1,293 @@
+Amazon Athena
+
+https://aws.amazon.com/blogs/big-data/top-10-performance-tuning-tips-for-amazon-athena/
+http://docs.aws.amazon.com/athena/latest/ug/convert-to-columnar.html
+Redshift Spectrum
+
+https://aws.amazon.com/blogs/big-data/10-best-practices-for-amazon-redshift-spectrum/
+Serverless Analysis Architecture Blogs
+
+https://aws.amazon.com/blogs/big-data/derive-insights-from-iot-in-minutes-using-aws-iot-amazon-kinesis-firehose-amazon-athena-and-amazon-quicksight/
+https://aws.amazon.com/blogs/big-data/build-a-serverless-architecture-to-analyze-amazon-cloudfront-access-logs-using-aws-lambda-amazon-athena-and-amazon-kinesis-analytics/
+Build a Data Lake Foundation with AWS Glue and Amazon S3
+
+https://aws.amazon.com/blogs/big-data/build-a-data-lake-foundation-with-aws-glue-and-amazon-s3/
+AWS Big Data Blog
+
+https://aws.amazon.com/blogs/big-data/
+
+=======================
+
+1. Create a s3 bucket named 'akz-city-data'
+2. Upload the files in s3 folder. In the file CityData.manifest,
+   make the following changes.
+   
+   {
+"entries": [
+{"url":"s3://paathshala-city-data/CityData.csv", "mandatory":true},
+{"url":"s3://paathshala-city-data/CityData1.csv", "mandatory":true}
+]
+}
+
+3. Go to s3 analytics and add following filter
+
+{
+    "Sid": "InventoryAndAnalyticsExamplePolicy",
+    "Effect": "Allow",
+    "Principal": {
+        "Service": "s3.amazonaws.com"
+    },
+    "Action": [
+        "s3:PutObject"
+    ],
+    "Resource": [
+        "arn:aws:s3:::akz-city-data/*"
+    ],
+    "Condition": {
+        "ArnLike": {
+            "aws:SourceArn": "arn:aws:s3:::akz-city-data"
+        },
+        "StringEquals": {
+            "aws:SourceAccount": "615360450654",
+            "s3:x-amz-acl": "bucket-owner-full-control"
+        }
+    }
+}
+
+4. Create IAM role MyRedshiftRole with policies 
+   - AmazonRedshiftDataFullAccess
+   - AmazonDMSRedshiftS3Role
+   - AmazonS3ReadOnlyAccess
+   
+5. Create Redshift cluster by clicking on Launch Cluster
+
+6. Paathshala Redshift cluster - paathshalaredshift (keep letters lower case if u use hyphen -)
+   Db name: tickit
+   port: 5439
+   master user name: awsuser
+   master user pwd: awsuser1
+   master user pwd: awsuser1
+   node type: dc2.large
+   cluster type: Multi Node
+   number of compute nodes: 2  
+   
+   // Compute nodes store data and execute queries, one leader node added to your cluster free
+      of charge. Leader node is access point for ODBC/JDBC and generates the query plan for the
+	  queries executed on compute nodes.
+	  
+   Keep all the default options and in Available roles, select MyRedshiftRole created in step 4
+   
+7. Install Aginity workbench for Amazon Redshift
+
+8. In the connect to Server dialog, fill following details:
+
+   Saved: name
+   Server: cluster endpoint copied from aws console
+   user id: awsuser
+   user pwd: awsuser1
+   port: 5439
+   database: tickit
+   
+   Get your machine's  ip from site ip4.me
+   
+   you might get connection refused error:
+   
+   so you need to open 5439 port for internet access
+   
+   Go to VPC -> Security group -> Inbound Rules -> Edit
+   
+   Add Rule 
+   Type            Protocol   Port Range Source               Description    Remove   
+   Redshift (5439) TCP        5439       <my ip address>/32   Redshift port
+   
+   /32 with your IP address indicates that only this address is allowed.
+   
+   Now try to connect from Aginity
+   
+9. IAM -> Create Policy. Name it GlueServiceRolePolicy
+
+   Go to visual editor
+   
+   Select Glue in Service
+   
+   Select All Glue actions (glue *)
+   
+   Select JSON tab
+   
+   Copy the content from file IAM+Permissions+Policy.txt and paste it in JSON tab.
+   
+10. Create role for Glue (MyDefaultGlueServiceRole)
+
+    Select 
+	
+	- AmazonS3FullAccess
+	- AWSGlueServiceRole
+
+11. Create a VPC endpoint
+
+    Select AWS services which is selected by default
+	
+	Service Name: S3
+	
+	Policy: Full Access
+	
+	Create Endpoint
+	
+12. Create a Database myfirstgluedb for AWS Glue
+    Location: \samples\databases\
+	Description: My first Glue DB
+
+13. Add tables in Glue
+    Select Add table manually
+	
+	Table name: MyCityData
+	Database: myfirstgluedb
+	Description: Data related to different cities hosted on S3
+	
+	Click Next
+	
+	Data is located in :
+	Include path: s3://paathshala-city-data/
+	
+	Click Next
+	
+	Classification: CSV
+	Delimiter: Comma: ,
+	
+	Click Next
+	
+	Define a schema
+	Add column
+	ID INT
+	
+	Edit schema
+	id int
+	Country STRING
+	State STRING
+	City STRING
+	Amount DECIMAL
+	
+	When we click on table, we get below info:
+	
+	Name	mycitydata
+Description	Data related to different cities hosted on S3
+Database	myfirstgluedb
+Classification	csv
+Location	
+s3://paathshala-city-data/
+Connection	
+Deprecated	No
+Last updated	Sat Feb 05 04:50:47 GMT+530 2022
+Input format	org.apache.hadoop.mapred.TextInputFormat
+Output format	org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+Serde serialization lib	org.apache.hadoop.hive.serde2.OpenCSVSerde
+Serde parameters	
+separatorChar ,
+Table properties	
+-
+Table properties:
+
+{
+	"StorageDescriptor": {
+		"cols": {
+			"FieldSchema": [
+				{
+					"name": "id",
+					"type": "int",
+					"comment": ""
+				}
+			]
+		},
+		"location": "s3://paathshala-city-data/",
+		"inputFormat": "org.apache.hadoop.mapred.TextInputFormat",
+		"outputFormat": "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat",
+		"compressed": "false",
+		"numBuckets": "0",
+		"SerDeInfo": {
+			"name": "",
+			"serializationLib": "org.apache.hadoop.hive.serde2.OpenCSVSerde",
+			"parameters": {
+				"separatorChar": ","
+			}
+		},
+		"bucketCols": [],
+		"sortCols": [],
+		"parameters": {},
+		"SkewedInfo": {},
+		"storedAsSubDirectories": "false"
+	},
+	"parameters": {
+		"classification": "csv"
+	}
+}
+	
+	
+	
+Section-7 Crawlers Glue
+
+Crawlers:
+   Automatically build your data catalog and keep it in sync
+   
+   automatically discover new data, extract schema defn.
+   
+     - detect schema changes & version tables
+	 - detect hive style partitions on amazon s3
+	 
+   built in classifiers for popular types, custom classifiers for GROK expressions.
+   
+   run adhoc or on schedule, pay only when crawler runs.
+
+Crawlers have 2 type of conn
+
+ - JDBC conn (RDS, Redshift)
+ - Object conn (S3)
+ 
+ - output of crawler consists of one or more metadata tables that
+   are defined in your Data Catalog.
+   
+ - ETL jobs that u define in aws glue use these metadata tables as
+   sources and targets. Your crawler will use IAM role to access your
+   data stores and Data Catalog.
+   
+ - When you define a crawler, you choose one or more classifiers that evaluate
+   this format of your data to infer a schema.
+ 
+ - If all the amazon s3 files in a folder have the same schema, the crawler creates
+   one table. Also, if the amazon s3 object is partitioned, only one metadata table
+   is created.
+   
+Lab:
+
+	1. Go to AWS Glue -> Add tables using a crawler
+	2. Crawler name: s3-city-data
+	3. Description: Crawler to scan city data related csv files from S3
+	4. click Next
+	5. Specify crawler source type
+	   Source type: Data stores
+	   Repeat crawls of s3 datastores: crawl all folders
+	6. click Next
+	7. Add a datastore
+	   - choose a datastore: S3
+	   - Include path: s3://paathshala-city-data
+	   - click Next
+    8. Add another datastore.  No
+	9. Choose IAM role
+	
+Note: AWS Glue is built on top of spark
+
+Compare 2 architectures for log analysis pipeline
+
+1. Raw logs / structured logs -> { Staging table/s } -> Apache Spark -> { Final table/s } -> presto -> SQL
+
+2. Raw logs / structured logs -> { Staging s3 bucket } -> AWS Glue -> { Final s3 bucket } -> AWS Athena -> SQL
+
+Athena uses Apache Hive to define tables and create dbs, which are essentially a logical namespace for tables.
+Athena engine is based on Hive DDL. You run DDL queries in Athena.
+
+Athena does not modify your data in s3. Athena stores query results in s3.
+Each query that we run has a results file stored automatically in a CSV (*.csv)
+format and Athena metadata file.
+	
+
+   
+   
